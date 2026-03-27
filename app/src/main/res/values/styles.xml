@@ -1,0 +1,41 @@
+<resources>
+
+    <style name="CalcButtonBase">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">72dp</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:layout_margin">6dp</item>
+        <item name="android:textSize">24sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:padding">0dp</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="android:insetLeft">0dp</item>
+        <item name="android:insetRight">0dp</item>
+        <item name="android:minWidth">0dp</item>
+        <item name="android:minHeight">0dp</item>
+        <item name="android:textAllCaps">false</item>
+    </style>
+
+    <style name="CalcButtonNumber" parent="CalcButtonBase">
+        <item name="android:background">@drawable/bg_btn_number</item>
+        <item name="android:textColor">@color/text_light</item>
+    </style>
+
+    <style name="CalcButtonOperator" parent="CalcButtonBase">
+        <item name="android:background">@drawable/bg_btn_operator</item>
+        <item name="android:textColor">@color/text_light</item>
+    </style>
+
+    <style name="CalcButtonLight" parent="CalcButtonBase">
+        <item name="android:background">@drawable/bg_btn_light</item>
+        <item name="android:textColor">@color/text_dark</item>
+    </style>
+
+    <style name="CalcButtonEqual" parent="CalcButtonBase">
+        <item name="android:background">@drawable/bg_btn_equal</item>
+        <item name="android:textColor">@color/text_dark</item>
+    </style>
+
+</resources>

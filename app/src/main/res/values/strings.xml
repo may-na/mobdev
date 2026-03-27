@@ -1,3 +1,10 @@
 <resources>
-    <string name="app_name">mobdev</string>
+    <string name="app_name">Calculator</string>
+    <string name="ac_label">AC</string>
+    <string name="brackets_label">()</string>
+    <string name="percent_label">%</string>
+    <string name="divide_label">÷</string>
+    <string name="multiply_label">×</string>
+    <string name="backspace_label">⌫</string>
+    <string name="error_text">Ошибка</string>
 </resources>

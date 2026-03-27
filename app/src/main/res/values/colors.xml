@@ -7,4 +7,16 @@
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
+    <color name="bg_main">#06052E</color>
+    <color name="display_text">#F4F1FF</color>
+    <color name="display_subtext">#C7A8D9</color>
+
+    <color name="btn_number">#20206A</color>
+    <color name="btn_operator">#5B52D6</color>
+    <color name="btn_light">#A9BAFF</color>
+    <color name="btn_equal">#F7B0D4</color>
+
+    <color name="text_dark">#15143A</color>
+    <color name="text_light">#F6F3FF</color>
 </resources>
