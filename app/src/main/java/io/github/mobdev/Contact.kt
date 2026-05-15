@@ -1,6 +1,5 @@
 package io.github.mobdev
 
-import android.annotation.SuppressLint
 import android.content.Context
 import android.database.Cursor
 import android.provider.ContactsContract
@@ -12,25 +11,46 @@ data class Contact(
     val email: String?,
 )
 
-@SuppressLint("Range")
 fun Context.fetchAllContacts(): List<Contact> {
+    val emailsByContactId = readEmailsByContactId()
+
     return contentResolver.query(
         ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
-        null, null, null, null
+        arrayOf(
+            ContactsContract.CommonDataKinds.Phone.CONTACT_ID,
+            ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
+            ContactsContract.CommonDataKinds.Phone.NUMBER,
+        ),
+        null, null, null
     ).use { cursor: Cursor? ->
         if (cursor == null) return emptyList()
         buildList {
             while (cursor.moveToNext()) {
-                val name = cursor.stringOrNull(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)
-                val phoneNumber = cursor.stringOrNull(ContactsContract.CommonDataKinds.Phone.NUMBER)
-                val email = cursor.stringOrNull(ContactsContract.CommonDataKinds.Email.ADDRESS)
-                add(Contact(name, phoneNumber, email))
+                val contactId = cursor.getLong(0)
+                val name = cursor.getStringOrNull(1)
+                val phoneNumber = cursor.getStringOrNull(2)
+                add(Contact(name, phoneNumber, emailsByContactId[contactId]))
             }
         }
     }
 }
 
-private fun Cursor.stringOrNull(columnName: String): String? {
-    val index = getColumnIndex(columnName)
-    return if (index < 0) null else getStringOrNull(index)
+private fun Context.readEmailsByContactId(): Map<Long, String> {
+    val result = mutableMapOf<Long, String>()
+    contentResolver.query(
+        ContactsContract.CommonDataKinds.Email.CONTENT_URI,
+        arrayOf(
+            ContactsContract.CommonDataKinds.Email.CONTACT_ID,
+            ContactsContract.CommonDataKinds.Email.ADDRESS,
+        ),
+        null, null, null
+    ).use { cursor: Cursor? ->
+        if (cursor == null) return result
+        while (cursor.moveToNext()) {
+            val contactId = cursor.getLong(0)
+            val email = cursor.getStringOrNull(1)
+            if (email != null) result.putIfAbsent(contactId, email)
+        }
+    }
+    return result
 }
