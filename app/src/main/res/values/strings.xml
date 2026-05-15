@@ -1,3 +1,33 @@
 <resources>
-    <string name="app_name">mobdev</string>
+    <string name="app_name">Чат</string>
+
+    <string name="login_title">Вход</string>
+    <string name="login_name_label">Имя пользователя</string>
+    <string name="login_password_label">Пароль</string>
+    <string name="login_button">Войти</string>
+    <string name="login_error_title">Ошибка</string>
+    <string name="login_error_invalid">Неверный логин / пароль</string>
+    <string name="login_error_network">Не удалось соединиться с сервером</string>
+    <string name="login_error_dismiss">ОК</string>
+
+    <string name="chats_title">Чаты</string>
+    <string name="chats_empty">Каналов пока нет</string>
+    <string name="chats_logout">Выйти</string>
+    <string name="chats_select_prompt">Выберите чат</string>
+    <string name="chats_load_error">Не удалось загрузить список чатов</string>
+    <string name="chats_retry">Повторить</string>
+
+    <string name="messages_title">%1$s</string>
+    <string name="messages_load_more">Загрузить ещё</string>
+    <string name="messages_empty">Сообщений пока нет</string>
+    <string name="messages_send_hint">Сообщение</string>
+    <string name="messages_send">Отправить</string>
+    <string name="messages_send_error">Не удалось отправить</string>
+    <string name="messages_load_error">Не удалось загрузить сообщения</string>
+
+    <string name="image_title">Картинка</string>
+    <string name="image_content_description">Картинка</string>
+
+    <string name="back">Назад</string>
+    <string name="close">Закрыть</string>
 </resources>
