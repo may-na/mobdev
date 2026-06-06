@@ -22,8 +22,11 @@
     <string name="messages_empty">Сообщений пока нет</string>
     <string name="messages_send_hint">Сообщение</string>
     <string name="messages_send">Отправить</string>
-    <string name="messages_send_error">Не удалось отправить</string>
     <string name="messages_load_error">Не удалось загрузить сообщения</string>
+    <string name="messages_load_error_offline">Нет соединения и нет сохранённой истории</string>
+    <string name="messages_pending">отправляется…</string>
+
+    <string name="offline_banner">Нет соединения с сетью</string>
 
     <string name="image_title">Картинка</string>
     <string name="image_content_description">Картинка</string>

@@ -1,5 +1,6 @@
 package io.github.mobdev.data
 
+import io.github.mobdev.data.db.MessageEntity
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -61,4 +62,58 @@ fun MessageDto.toDomain(): Message {
         content = content,
         time = time,
     )
+}
+
+private const val KIND_TEXT = "text"
+private const val KIND_IMAGE = "image"
+private const val KIND_UNKNOWN = "unknown"
+
+fun MessageDto.toEntity(channel: String): MessageEntity {
+    val (kind, text, link) = when {
+        data.text != null -> Triple(KIND_TEXT, data.text.text, null)
+        data.image != null -> Triple(KIND_IMAGE, null, data.image.link.orEmpty())
+        else -> Triple(KIND_UNKNOWN, null, null)
+    }
+    return MessageEntity(
+        id = id,
+        channel = channel,
+        sender = from,
+        recipient = to,
+        kind = kind,
+        text = text,
+        imageLink = link,
+        time = time,
+    )
+}
+
+fun MessageEntity.toDomain(): Message {
+    val content: MessageContent = when (kind) {
+        KIND_TEXT -> MessageContent.Text(text.orEmpty())
+        KIND_IMAGE -> MessageContent.Image(imageLink.orEmpty())
+        else -> MessageContent.Unknown
+    }
+    return Message(
+        id = id,
+        from = sender,
+        to = recipient,
+        content = content,
+        time = time,
+    )
+}
+
+sealed interface ChatItem {
+    val sortKey: Long
+
+    data class Server(val message: Message) : ChatItem {
+        override val sortKey: Long get() = message.id
+    }
+
+    data class Pending(
+        val localId: Long,
+        val from: String,
+        val text: String,
+        val createdAt: Long,
+    ) : ChatItem {
+        override val sortKey: Long get() = Long.MAX_VALUE - 1_000_000L + localId
+    }
 }

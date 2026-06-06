@@ -38,21 +38,18 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -60,6 +57,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -68,7 +66,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
-import io.github.mobdev.data.Message
+import io.github.mobdev.data.ChatItem
 import io.github.mobdev.data.MessageContent
 import io.github.mobdev.data.Network
 
@@ -202,10 +200,33 @@ private fun AuthenticatedRoot(state: UiState, vm: ChatViewModel) {
         vm.onCloseChannel()
     }
 
-    if (isLandscape) {
-        LandscapeLayout(state = state, vm = vm)
-    } else {
-        PortraitLayout(state = state, vm = vm)
+    Column(modifier = Modifier.fillMaxSize()) {
+        if (!state.isOnline) OfflineBanner()
+        Box(modifier = Modifier.weight(1f)) {
+            if (isLandscape) {
+                LandscapeLayout(state = state, vm = vm)
+            } else {
+                PortraitLayout(state = state, vm = vm)
+            }
+        }
+    }
+}
+
+@Composable
+private fun OfflineBanner() {
+    Surface(
+        color = MaterialTheme.colorScheme.errorContainer,
+        contentColor = MaterialTheme.colorScheme.onErrorContainer,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Text(
+            text = stringResource(R.string.offline_banner),
+            style = MaterialTheme.typography.labelMedium,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 6.dp),
+            textAlign = TextAlign.Center,
+        )
     }
 }
 
@@ -220,17 +241,14 @@ private fun PortraitLayout(state: UiState, vm: ChatViewModel) {
         )
         selected != null -> MessagesScreen(
             channel = selected,
-            state = state.messagesByChannel[selected] ?: MessagesState(),
-            sending = state.sending,
-            sendError = state.sendError,
+            state = state,
             onBack = vm::onCloseChannel,
             onLoadOlder = vm::onLoadOlder,
             onSend = vm::onSend,
             onOpenImage = vm::onOpenImage,
-            onDismissSendError = vm::dismissSendError,
         )
         else -> ChatsListScreen(
-            chats = state.chats,
+            state = state,
             selectedChannel = null,
             onClick = vm::onSelectChannel,
             onLogout = vm::onLogout,
@@ -248,7 +266,7 @@ private fun LandscapeLayout(state: UiState, vm: ChatViewModel) {
                 .fillMaxHeight()
         ) {
             ChatsListScreen(
-                chats = state.chats,
+                state = state,
                 selectedChannel = state.selectedChannel,
                 onClick = vm::onSelectChannel,
                 onLogout = vm::onLogout,
@@ -273,14 +291,11 @@ private fun LandscapeLayout(state: UiState, vm: ChatViewModel) {
             } else {
                 MessagesScreen(
                     channel = selected,
-                    state = state.messagesByChannel[selected] ?: MessagesState(),
-                    sending = state.sending,
-                    sendError = state.sendError,
+                    state = state,
                     onBack = vm::onCloseChannel,
                     onLoadOlder = vm::onLoadOlder,
                     onSend = vm::onSend,
                     onOpenImage = vm::onOpenImage,
-                    onDismissSendError = vm::dismissSendError,
                     showBackButton = false,
                 )
             }
@@ -299,7 +314,7 @@ private fun LandscapeLayout(state: UiState, vm: ChatViewModel) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ChatsListScreen(
-    chats: ChatsState,
+    state: UiState,
     selectedChannel: String?,
     onClick: (String) -> Unit,
     onLogout: () -> Unit,
@@ -325,14 +340,14 @@ private fun ChatsListScreen(
                 .padding(padding)
                 .fillMaxSize()
         ) {
-            when (chats) {
-                ChatsState.Idle, ChatsState.Loading -> Box(
+            when {
+                state.channelsLoading && state.channels.isEmpty() -> Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center,
                 ) {
                     CircularProgressIndicator()
                 }
-                ChatsState.Error -> Column(
+                state.channelsError && state.channels.isEmpty() -> Column(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(24.dp),
@@ -346,22 +361,17 @@ private fun ChatsListScreen(
                     Spacer(Modifier.height(16.dp))
                     Button(onClick = onRetry) { Text(stringResource(R.string.chats_retry)) }
                 }
-                is ChatsState.Loaded -> {
-                    if (chats.channels.isEmpty()) {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(stringResource(R.string.chats_empty))
-                        }
-                    } else {
-                        ChannelsList(
-                            channels = chats.channels,
-                            selectedChannel = selectedChannel,
-                            onClick = onClick,
-                        )
-                    }
+                state.channels.isEmpty() -> Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(stringResource(R.string.chats_empty))
                 }
+                else -> ChannelsList(
+                    channels = state.channels,
+                    selectedChannel = selectedChannel,
+                    onClick = onClick,
+                )
             }
         }
     }
@@ -404,33 +414,21 @@ private fun ChannelsList(
 @Composable
 private fun MessagesScreen(
     channel: String,
-    state: MessagesState,
-    sending: Boolean,
-    sendError: Boolean,
+    state: UiState,
     onBack: () -> Unit,
     onLoadOlder: () -> Unit,
     onSend: (String) -> Unit,
     onOpenImage: (String) -> Unit,
-    onDismissSendError: () -> Unit,
     showBackButton: Boolean = true,
 ) {
     var draft by rememberSaveable(channel) { mutableStateOf("") }
     val listState = rememberLazyListState()
-    val snackbarHostState = remember { SnackbarHostState() }
-    var lastMaxId by rememberSaveable(channel) { mutableLongStateOf(-1L) }
+    var lastSortKey by rememberSaveable(channel) { mutableLongStateOf(Long.MIN_VALUE) }
 
-    val errorMessage = stringResource(R.string.messages_send_error)
-    LaunchedEffect(sendError) {
-        if (sendError) {
-            snackbarHostState.showSnackbar(errorMessage)
-            onDismissSendError()
-        }
-    }
-
-    LaunchedEffect(channel, state.messages.lastOrNull()?.id) {
-        val newestId = state.messages.lastOrNull()?.id ?: return@LaunchedEffect
-        if (newestId > lastMaxId) {
-            lastMaxId = newestId
+    LaunchedEffect(channel, state.messages.lastOrNull()?.sortKey) {
+        val newest = state.messages.lastOrNull()?.sortKey ?: return@LaunchedEffect
+        if (newest > lastSortKey) {
+            lastSortKey = newest
             listState.scrollToItem(state.messages.lastIndex)
         }
     }
@@ -451,12 +449,11 @@ private fun MessagesScreen(
                 },
             )
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
             MessageInputBar(
                 value = draft,
                 onValueChange = { draft = it },
-                sending = sending,
+                sending = state.sending,
                 onSend = {
                     val text = draft.trim()
                     if (text.isNotEmpty()) {
@@ -473,17 +470,23 @@ private fun MessagesScreen(
                 .fillMaxSize()
         ) {
             when {
-                state.loading && state.messages.isEmpty() -> Box(
+                state.messagesLoading && state.messages.isEmpty() -> Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center,
                 ) {
                     CircularProgressIndicator()
                 }
-                state.error && state.messages.isEmpty() -> Box(
+                state.messagesError && state.messages.isEmpty() -> Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(stringResource(R.string.messages_load_error))
+                    Text(
+                        text = stringResource(
+                            if (state.isOnline) R.string.messages_load_error
+                            else R.string.messages_load_error_offline
+                        ),
+                        textAlign = TextAlign.Center,
+                    )
                 }
                 state.messages.isEmpty() -> Box(
                     modifier = Modifier.fillMaxSize(),
@@ -498,7 +501,7 @@ private fun MessagesScreen(
                         .padding(horizontal = 12.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    if (state.hasMore) {
+                    if (state.messagesHasMore && state.isOnline) {
                         item("load-older") {
                             Box(
                                 modifier = Modifier
@@ -506,7 +509,7 @@ private fun MessagesScreen(
                                     .padding(8.dp),
                                 contentAlignment = Alignment.Center,
                             ) {
-                                if (state.loadingOlder) {
+                                if (state.messagesLoadingOlder) {
                                     CircularProgressIndicator(
                                         modifier = Modifier.size(20.dp),
                                         strokeWidth = 2.dp,
@@ -519,8 +522,8 @@ private fun MessagesScreen(
                             }
                         }
                     }
-                    items(state.messages, key = { it.id }) { msg ->
-                        MessageRow(message = msg, onOpenImage = onOpenImage)
+                    items(state.messages, key = { it.itemKey() }) { item ->
+                        MessageRow(item = item, onOpenImage = onOpenImage)
                     }
                 }
             }
@@ -528,36 +531,66 @@ private fun MessagesScreen(
     }
 }
 
+private fun ChatItem.itemKey(): String = when (this) {
+    is ChatItem.Server -> "s-${message.id}"
+    is ChatItem.Pending -> "p-$localId"
+}
+
 @Composable
 private fun MessageRow(
-    message: Message,
+    item: ChatItem,
     onOpenImage: (String) -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
-        Text(
-            text = message.from,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.primary,
-        )
-        Spacer(Modifier.height(2.dp))
-        when (val content = message.content) {
-            is MessageContent.Text -> Text(
-                text = content.text,
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            is MessageContent.Image -> AsyncImage(
-                model = Network.thumbUrl(content.link),
-                contentDescription = stringResource(R.string.image_content_description),
-                contentScale = ContentScale.Fit,
-                modifier = Modifier
-                    .fillMaxWidth(0.6f)
-                    .clip(RoundedCornerShape(8.dp))
-                    .clickable { onOpenImage(content.link) },
-            )
-            MessageContent.Unknown -> Text(
-                text = "—",
-                style = MaterialTheme.typography.bodyMedium,
-            )
+        when (item) {
+            is ChatItem.Server -> {
+                val message = item.message
+                Text(
+                    text = message.from,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Spacer(Modifier.height(2.dp))
+                when (val content = message.content) {
+                    is MessageContent.Text -> Text(
+                        text = content.text,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    is MessageContent.Image -> AsyncImage(
+                        model = Network.thumbUrl(content.link),
+                        contentDescription = stringResource(R.string.image_content_description),
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier
+                            .fillMaxWidth(0.6f)
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable { onOpenImage(content.link) },
+                    )
+                    MessageContent.Unknown -> Text(
+                        text = "—",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+            }
+            is ChatItem.Pending -> {
+                Text(
+                    text = item.from,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = item.text,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontStyle = FontStyle.Italic,
+                )
+                Text(
+                    text = stringResource(R.string.messages_pending),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontStyle = FontStyle.Italic,
+                )
+            }
         }
     }
 }
